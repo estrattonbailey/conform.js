@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "main": "dist/conform.js",
+  "jsnext:main": "index.js",
   "scripts": {
     "package": "mkdir browser ; browserify index.js --standalone conform > browser/conform.js"
   },
