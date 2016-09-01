@@ -1,0 +1,51 @@
+{
+  "name": "conform",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/conform.js",
+  "scripts": {
+    "package": "mkdir browser ; browserify index.js --standalone conform > browser/conform.js"
+  },
+  "browserify": {
+    "debug": true,
+    "cache": {},
+    "packageCache": {},
+    "extension": [
+      "js"
+    ],
+    "transform": [
+      [
+        "babelify",
+        {
+          "presets": [
+            "es2015",
+            "react"
+          ]
+        }
+      ]
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/estrattonbailey/conform.git"
+  },
+  "keywords": [],
+  "author": "estrattonbailey",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/estrattonbailey/conform/issues"
+  },
+  "homepage": "https://github.com/estrattonbailey/conform#readme",
+  "devDependencies": {
+    "babel-preset-es2015": "^6.9.0",
+    "babel-preset-react": "^6.5.0",
+    "babelify": "^7.3.0",
+    "browserify": "^13.0.1",
+    "minifyify": "^7.3.3",
+    "watchify": "^3.7.0"
+  },
+  "dependencies": {
+    "nanoajax": "^0.4.3",
+    "micro-jsonp": "https://github.com/estrattonbailey/micro-jsonp"
+  }
+}
