@@ -45,7 +45,7 @@
     "watchify": "^3.7.0"
   },
   "dependencies": {
-    "nanoajax": "^0.4.3",
-    "micro-jsonp": "https://github.com/estrattonbailey/micro-jsonp"
+    "micro-jsonp": "0.0.1",
+    "nanoajax": "^0.4.3"
   }
 }
