@@ -25,24 +25,22 @@ const isValid = (fields) => {
 }
 
 const getFormFields = (form) => {
-  let fields = [].slice.call(form.querySelectorAll('[name]'))
+  let fields = [].slice.call(form.querySelectorAll('[name]')) || false
 
   if (!fields) return
 
-  return fields.reduce((result, field) => {
-    result[field.getAttribute('name')] = {
-      valid: true,
-      name: field.getAttribute('name'),
-      value: field.value || undefined,
-      field
-    }
-
-    return result
-  }, {}) 
+  return fields.map(f => ({
+    name: f.getAttribute('name'),
+    value: f.value || undefined,
+    valid: true,
+    node: f
+  }))
 } 
 
 const runValidation = (fields, tests) => tests.forEach((test => {
-  let field = fields[test.name]
+  let field = fields.filter(f => test.name instanceof RegExp ? f.name.match(test.name) : test.name === f.name)[0]
+
+  if (!field) return
 
   if (test.validate(field)){
     test.success(field)
@@ -53,8 +51,13 @@ const runValidation = (fields, tests) => tests.forEach((test => {
   }
 }))
 
+const scrubAction = (base, data) => {
+  const query = base.match(/\?/) ? true : false
+  return `${base}${query ? '&' : '?'}${toQueryString(data)}`
+}
+
 const jsonpSend = (action, fields, successCb, errorCb) => {
-  jsonp(`${action}&${toQueryString(fields)}`, {
+  jsonp(scrubAction(action, fields), {
     param: 'c',
     response: (err, data) => {
       err ? errorCb(fields, err, null) : successCb(fields, data, null)
@@ -63,9 +66,10 @@ const jsonpSend = (action, fields, successCb, errorCb) => {
 } 
 
 const send = (method, action, fields, successCb, errorCb) => nanoajax.ajax({
-  url: `${action}&${toQueryString(fields)}`,
-  method: method 
+  url: scrubAction(action, fields),
+  method: method
 }, (status, res, req) => {
+  console.log(req)
   let success = status >= 200 && status <= 300
   success ? successCb(fields, res, req) : errorCb(fields, res, req)
 })
@@ -73,34 +77,28 @@ const send = (method, action, fields, successCb, errorCb) => nanoajax.ajax({
 export default (form, options = {}) => {
   form = form.getAttribute('action') ? form : form.getElementsByTagName('form')[0]
 
-  const method = options.method || 'POST'
-  const success = options.success ? options.success : (fields, res, req) => {}
-  const error = options.error ? options.error : (fields, res, req) => {}
-  const tests = options.tests || []
-  const action = form.getAttribute('action')
-  const jsonp = options.jsonp || false
+  const instance = {
+    method: options.method || 'POST',
+    success: options.success ? options.success : (fields, res, req) => {},
+    error: options.error ? options.error : (fields, res, req) => {},
+    tests: options.tests || [],
+    action: form.getAttribute('action'),
+    jsonp: options.jsonp || false
+  } 
 
   form.onsubmit = (e) => {
     e.preventDefault()
 
-    const fields = getFormFields(form)
+    instance.fields = getFormFields(form)
 
-    runValidation(fields, tests)
+    runValidation(instance.fields, instance.tests)
 
-    isValid(fields) ?
-      !!jsonp ? 
-        jsonpSend(action, fields, success, error)
-        : send(method, action, fields, success, error)
-      : error(fields)
+    isValid(instance.fields) ?
+      !!instance.jsonp ? 
+        jsonpSend(instance.action, instance.fields, instance.success, instance.error)
+        : send(instance.method, instance.action, instance.fields, instance.success, instance.error)
+      : instance.error(fields)
   }
 
-  return {
-    method,
-    action,
-    jsonp,
-    success,
-    error,
-    tests
-  } 
+  return instance
 }
-
