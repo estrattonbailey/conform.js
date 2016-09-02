@@ -1,33 +1,6 @@
 import nanoajax from 'nanoajax'
 import jsonp from 'micro-jsonp'
 
-const origin = window.location.origin || window.location.protocol+'//'+window.location.host
-
-const getAction = (form) => {
-  let action = form.getAttribute('action')
-  return action.split(/\#/)[0]
-}
-
-/**
- * Merge two objects into a 
- * new object
- *
- * @param {object} target Root object
- * @param {object} source Object to merge 
- *
- * @return {object} A *new* object with all props of the passed objects
- */
-export const merge = (target, ...args) => {
-  for (let i = 0; i < args.length; i++){
-    let source = args[i]
-    for (let key in source){
-      if (source[key]) target[key] = source[key]
-    }
-  }
-
-  return target 
-}
-
 const toQueryString = (fields) => {
   let data = ''
   let names = Object.keys(fields)
@@ -89,9 +62,9 @@ const jsonpSend = (action, fields, successCb, errorCb) => {
   })
 } 
 
-const send = (action, fields, successCb, errorCb) => nanoajax.ajax({
+const send = (method, action, fields, successCb, errorCb) => nanoajax.ajax({
   url: `${action}&${toQueryString(fields)}`,
-  method: 'GET'
+  method: method 
 }, (status, res, req) => {
   let success = status >= 200 && status <= 300
   success ? successCb(fields, res, req) : errorCb(fields, res, req)
@@ -100,14 +73,14 @@ const send = (action, fields, successCb, errorCb) => nanoajax.ajax({
 export default (form, options = {}) => {
   form = form.getAttribute('action') ? form : form.getElementsByTagName('form')[0]
 
-  const instance = Object({})
-
-  merge(instance, {
-    success: (data, response) => {},
-    error: (data, response) => {},
-    action: getAction(form),
-    tests: []
-  }, options)
+  const instance = {
+    method: options.method || 'POST',
+    success: options.success ? options.success : (fields, res, req) => {},
+    error: options.error ? options.error : (fields, res, req) => {},
+    tests: options.tests || [],
+    action: form.getAttribute('action'),
+    jsonp: options.jsonp || false
+  } 
 
   form.onsubmit = (e) => {
     e.preventDefault()
@@ -119,7 +92,7 @@ export default (form, options = {}) => {
     isValid(instance.fields) ?
       !!instance.jsonp ? 
         jsonpSend(instance.action, instance.fields, instance.success, instance.error)
-        : send(instance.action, instance.fields, instance.success, instance.error)
+        : send(instance.method, instance.action, instance.fields, instance.success, instance.error)
       : instance.error(fields)
   }
 
