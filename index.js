@@ -73,28 +73,34 @@ const send = (method, action, fields, successCb, errorCb) => nanoajax.ajax({
 export default (form, options = {}) => {
   form = form.getAttribute('action') ? form : form.getElementsByTagName('form')[0]
 
-  const instance = {
-    method: options.method || 'POST',
-    success: options.success ? options.success : (fields, res, req) => {},
-    error: options.error ? options.error : (fields, res, req) => {},
-    tests: options.tests || [],
-    action: form.getAttribute('action'),
-    jsonp: options.jsonp || false
-  } 
+  const method = options.method || 'POST'
+  const success = options.success ? options.success : (fields, res, req) => {}
+  const error = options.error ? options.error : (fields, res, req) => {}
+  const tests = options.tests || []
+  const action = form.getAttribute('action')
+  const jsonp = options.jsonp || false
 
   form.onsubmit = (e) => {
     e.preventDefault()
 
-    instance.fields = getFormFields(form)
+    const fields = getFormFields(form)
 
-    runValidation(instance.fields, instance.tests)
+    runValidation(fields, tests)
 
-    isValid(instance.fields) ?
-      !!instance.jsonp ? 
-        jsonpSend(instance.action, instance.fields, instance.success, instance.error)
-        : send(instance.method, instance.action, instance.fields, instance.success, instance.error)
-      : instance.error(fields)
+    isValid(fields) ?
+      !!jsonp ? 
+        jsonpSend(action, fields, success, error)
+        : send(method, action, fields, success, error)
+      : error(fields)
   }
 
-  return instance
+  return {
+    method,
+    action,
+    jsonp,
+    success,
+    error,
+    tests
+  } 
 }
+
