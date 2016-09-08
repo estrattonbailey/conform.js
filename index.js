@@ -27,7 +27,7 @@ const isValid = (fields) => {
 const getFormFields = (form) => {
   let fields = [].slice.call(form.querySelectorAll('[name]')) || false
 
-  if (!fields) return
+  if (!fields){ return }
 
   return fields.map(f => ({
     name: f.getAttribute('name'),
@@ -40,13 +40,13 @@ const getFormFields = (form) => {
 const runValidation = (fields, tests) => tests.forEach((test => {
   let field = fields.filter(f => test.name instanceof RegExp ? f.name.match(test.name) : test.name === f.name)[0]
 
-  if (!field) return
+  if (!field){ return }
 
   if (test.validate(field)){
-    test.success(field)
+    if (test.success) { test.success(field) }
     field.valid = true
   } else {
-    test.error(field)
+    if (test.error) { test.error(field) }
     field.valid = false 
   }
 }))
