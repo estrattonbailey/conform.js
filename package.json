@@ -1,6 +1,6 @@
 {
   "name": "conform.js",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A simple, unopinionated form submission utility library.",
   "main": "dist/conform.js",
   "jsnext:main": "index.js",
