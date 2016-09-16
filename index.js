@@ -1,5 +1,11 @@
 import nanoajax from 'nanoajax'
 import jsonp from 'micro-jsonp'
+import events from 'loop.js'
+
+const merge = (target, ...args) => {
+  args.forEach(a => Object.keys(a).forEach(k => target[k] = a[k]))
+  return target
+}
 
 const toQueryString = (fields) => {
   let data = ''
@@ -38,7 +44,7 @@ const getFormFields = (form) => {
 } 
 
 const runValidation = (fields, tests) => tests.forEach((test => {
-  let field = fields.filter(f => test.name instanceof RegExp ? f.name.match(test.name) : test.name === f.name)[0]
+  let field = fields.filter(f => test.name instanceof RegExp ? test.name.test(f.name) : test.name === f.name)[0]
 
   if (!field){ return }
 
@@ -56,48 +62,54 @@ const scrubAction = (base, data) => {
   return `${base}${query ? '&' : '?'}${toQueryString(data)}`
 }
 
-const jsonpSend = (action, fields, successCb, errorCb) => {
-  jsonp(scrubAction(action, fields), {
-    param: 'c',
-    response: (err, data) => {
-      err ? errorCb(fields, err, null) : successCb(fields, data, null)
-    }
-  })
-} 
-
-const send = (method, action, fields, successCb, errorCb) => nanoajax.ajax({
-  url: scrubAction(action, fields),
-  method: method
-}, (status, res, req) => {
-  console.log(req)
-  let success = status >= 200 && status <= 300
-  success ? successCb(fields, res, req) : errorCb(fields, res, req)
-})
-
-export default (form, options = {}) => {
-  form = form.getAttribute('action') ? form : form.getElementsByTagName('form')[0]
-
-  const instance = {
-    method: options.method || 'POST',
-    success: options.success ? options.success : (fields, res, req) => {},
-    error: options.error ? options.error : (fields, res, req) => {},
-    tests: options.tests || [],
+export default (root, options = {}) => {
+  const form = root.getAttribute('action') ? root : root.getElementsByTagName('form')[0]
+  let fields = getFormFields(form) 
+  const instance = Object.create(events({
+    getFields: () => fields
+  }))
+  
+  merge(instance, {
+    method: 'POST',
+    tests: [],
     action: form.getAttribute('action'),
-    jsonp: options.jsonp || false
+    jsonp: false 
+  }, options)
+
+  function jsonpSend(){
+    jsonp(scrubAction(instance.action, fields), {
+      param: instance.jsonp,
+      response: (err, data) => {
+        let o = { fields, res: err ? err : data, req: null }
+        err ? instance.emit('error', o) : instance.emit('success', o)
+      }
+    })
   } 
 
-  form.onsubmit = (e) => {
+  function send(){
+    return nanoajax.ajax({
+      url: instance.action,
+      body: toQueryString(fields),
+      method: instance.method
+    }, (status, res, req) => {
+      let success = status >= 200 && status <= 300
+      let o = { fields, res, req }
+      success ? instance.emit('success', o) : instance.emit('error', o)
+    })
+  }
+
+  form.onsubmit = e => {
     e.preventDefault()
 
-    instance.fields = getFormFields(form)
+    instance.emit('submit')
 
-    runValidation(instance.fields, instance.tests)
+    fields = getFormFields(form)
 
-    isValid(instance.fields) ?
-      !!instance.jsonp ? 
-        jsonpSend(instance.action, instance.fields, instance.success, instance.error)
-        : send(instance.method, instance.action, instance.fields, instance.success, instance.error)
-      : instance.error(fields)
+    runValidation(fields, instance.tests)
+
+    isValid(fields) ?
+      !!instance.jsonp ?  jsonpSend() : send()
+      : instance.emit('error', { fields, res: 'Field validation returned an error.', req: null }) 
   }
 
   return instance

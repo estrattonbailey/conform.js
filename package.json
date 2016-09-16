@@ -1,12 +1,12 @@
 {
   "name": "conform.js",
   "version": "0.2.1",
-  "description": "A simple, unopinionated form submission utility library.",
-  "main": "dist/conform.js",
+  "description": "A tiny form submission utility library.",
+  "main": "index.js",
   "jsnext:main": "index.js",
   "scripts": {
-    "build": "mkdir -p dist && browserify index.js --standalone conform > dist/conform.js",
-    "size": "bundle-size ./dist/conform.js",
+    "build": "mkdir -p browser && browserify index.js --standalone conform > browser/conform.js",
+    "size": "bundle-size ./browser/conform.js",
     "test": "ava test -v"
   },
   "browserify": {
@@ -46,6 +46,7 @@
     "watchify": "^3.7.0"
   },
   "dependencies": {
+    "loop.js": "0.0.1",
     "micro-jsonp": "^1.0.0",
     "nanoajax": "^0.4.3"
   }

@@ -13,7 +13,24 @@ var _microJsonp = require('micro-jsonp');
 
 var _microJsonp2 = _interopRequireDefault(_microJsonp);
 
+var _loop = require('loop.js');
+
+var _loop2 = _interopRequireDefault(_loop);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var merge = function merge(target) {
+  for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    args[_key - 1] = arguments[_key];
+  }
+
+  args.forEach(function (a) {
+    return Object.keys(a).forEach(function (k) {
+      return target[k] = a[k];
+    });
+  });
+  return target;
+};
 
 var toQueryString = function toQueryString(fields) {
   var data = '';
@@ -58,7 +75,7 @@ var getFormFields = function getFormFields(form) {
 var runValidation = function runValidation(fields, tests) {
   return tests.forEach(function (test) {
     var field = fields.filter(function (f) {
-      return test.name instanceof RegExp ? f.name.match(test.name) : test.name === f.name;
+      return test.name instanceof RegExp ? test.name.test(f.name) : test.name === f.name;
     })[0];
 
     if (!field) {
@@ -84,54 +101,99 @@ var scrubAction = function scrubAction(base, data) {
   return '' + base + (query ? '&' : '?') + toQueryString(data);
 };
 
-var jsonpSend = function jsonpSend(action, fields, successCb, errorCb) {
-  (0, _microJsonp2.default)(scrubAction(action, fields), {
-    param: 'c',
-    response: function response(err, data) {
-      err ? errorCb(fields, err, null) : successCb(fields, data, null);
-    }
-  });
-};
-
-var send = function send(method, action, fields, successCb, errorCb) {
-  return _nanoajax2.default.ajax({
-    url: scrubAction(action, fields),
-    method: method
-  }, function (status, res, req) {
-    console.log(req);
-    var success = status >= 200 && status <= 300;
-    success ? successCb(fields, res, req) : errorCb(fields, res, req);
-  });
-};
-
-exports.default = function (form) {
+exports.default = function (root) {
   var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
-  form = form.getAttribute('action') ? form : form.getElementsByTagName('form')[0];
+  var form = root.getAttribute('action') ? root : root.getElementsByTagName('form')[0];
+  var fields = getFormFields(form);
+  var instance = Object.create((0, _loop2.default)({
+    getFields: function getFields() {
+      return fields;
+    }
+  }));
 
-  var instance = {
-    method: options.method || 'POST',
-    success: options.success ? options.success : function (fields, res, req) {},
-    error: options.error ? options.error : function (fields, res, req) {},
-    tests: options.tests || [],
+  merge(instance, {
+    method: 'POST',
+    tests: [],
     action: form.getAttribute('action'),
-    jsonp: options.jsonp || false
-  };
+    jsonp: false
+  }, options);
+
+  function jsonpSend() {
+    (0, _microJsonp2.default)(scrubAction(instance.action, fields), {
+      param: instance.jsonp,
+      response: function response(err, data) {
+        var o = { fields: fields, res: err ? err : data, req: null };
+        err ? instance.emit('error', o) : instance.emit('success', o);
+      }
+    });
+  }
+
+  function send() {
+    return _nanoajax2.default.ajax({
+      url: instance.action,
+      body: toQueryString(fields),
+      method: instance.method
+    }, function (status, res, req) {
+      var success = status >= 200 && status <= 300;
+      var o = { fields: fields, res: res, req: req };
+      success ? instance.emit('success', o) : instance.emit('error', o);
+    });
+  }
 
   form.onsubmit = function (e) {
     e.preventDefault();
 
-    instance.fields = getFormFields(form);
+    instance.emit('submit');
 
-    runValidation(instance.fields, instance.tests);
+    fields = getFormFields(form);
 
-    isValid(instance.fields) ? !!instance.jsonp ? jsonpSend(instance.action, instance.fields, instance.success, instance.error) : send(instance.method, instance.action, instance.fields, instance.success, instance.error) : instance.error(fields);
+    runValidation(fields, instance.tests);
+
+    isValid(fields) ? !!instance.jsonp ? jsonpSend() : send() : instance.emit('error', { fields: fields, res: 'Field validation returned an error.', req: null });
   };
 
   return instance;
 };
 
-},{"micro-jsonp":2,"nanoajax":3}],2:[function(require,module,exports){
+},{"loop.js":2,"micro-jsonp":3,"nanoajax":4}],2:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+exports.default = function () {
+  var o = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+
+  var listeners = {};
+
+  var on = function on(e) {
+    var cb = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+
+    if (!cb) return;
+    listeners[e] = listeners[e] || { queue: [] };
+    listeners[e].queue.push(cb);
+  };
+
+  var emit = function emit(e) {
+    var data = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+
+    var items = listeners[e] ? listeners[e].queue : false;
+    items && items.forEach(function (i) {
+      return i(data);
+    });
+  };
+
+  return _extends({}, o, {
+    emit: emit,
+    on: on
+  });
+};
+
+},{}],3:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -224,7 +286,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 });
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 (function (global){
 // Best place to find information on XHR features is:
 // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest
