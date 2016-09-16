@@ -5,8 +5,8 @@
   "main": "index.js",
   "jsnext:main": "index.js",
   "scripts": {
-    "build": "mkdir -p browser && browserify index.js --standalone conform > browser/conform.js",
-    "size": "bundle-size ./browser/conform.js",
+    "build": "mkdir -p browser && browserify index.js --standalone conform > browser/index.js",
+    "size": "bundle-size ./browser/index.js",
     "test": "ava test -v"
   },
   "browserify": {

@@ -1,11 +1,14 @@
 # conform.js
 A tiny form submission utility library. Configure custom validation for individual fields and easily handle success and error states. 
 
-**2.39kb gzipped.**
+**2.76kb gzipped.**
 
 ## Usage
 ```javascript
 import conform from 'conform.js'
+
+// CommonJS (via UMD)
+var conform = require('conform.js/browser')
 ```
 
 Create an instance by passing a wrapping element or your form itself, followed by an optional `options` object.
