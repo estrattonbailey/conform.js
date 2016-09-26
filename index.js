@@ -107,9 +107,9 @@ export default (root, options = {}) => {
 
     runValidation(fields, instance.tests)
 
-    isValid(fields) ?
-      !!instance.jsonp ?  jsonpSend() : send()
-      : instance.emit('error', { fields, res: 'Field validation returned an error.', req: null }) 
+    if (isValid(fields)){
+      !!instance.jsonp ? jsonpSend() : send()
+    }
   }
 
   return instance
