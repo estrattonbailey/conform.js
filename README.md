@@ -24,12 +24,12 @@ const myForm = conform(form, {
   email: (node) => {
     return /.+\@.+\..+/.test(node.value)
   },
-	'address[*]': (node) => {
-  	return node.value !== ''
+  'address[*]': (node) => {
+    return node.value !== ''
   }
 }, (err, formValues) => {
-	if (err) {
-  	console.error(err)
+  if (err) {
+    console.error(err)
   } else {
     fetch(form.action, {
       method: 'POST',
@@ -38,7 +38,7 @@ const myForm = conform(form, {
     }).then(res => res.json()).then(res => {
       // success
     })
-	}
+  }
 })
 
 /**
